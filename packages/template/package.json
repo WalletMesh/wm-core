@@ -1,0 +1,16 @@
+{
+  "name": "template",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WalletMesh/wm-core.git"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "rimraf dist",
+    "type-check": "tsc --noEmit"
+  }
+}

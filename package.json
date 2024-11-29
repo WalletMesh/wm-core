@@ -1,0 +1,31 @@
+{
+  "name": "walletmesh-sdk",
+  "version": "0.0.1",
+  "description": "WalletMesh Core Monorepo",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WalletMesh/wm-core.git"
+  },
+  "scripts": {
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "publish-packages": "lerna publish from-package -y",
+    "clean": "pnpm lerna run clean",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format",
+    "format:fix": "biome format --write",
+    "version-bump": "lerna version patch",
+    "create-package": "bash create-package.sh"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.0",
+    "lerna": "^8.1.9",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

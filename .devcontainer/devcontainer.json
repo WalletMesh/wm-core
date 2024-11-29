@@ -1,0 +1,42 @@
+{
+  "name": "WalletMesh Core",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/wm-core,type=bind,consistency=cached",
+  "workspaceFolder": "/home/vscode/wm-core",
+  "mounts": [
+    {
+      "source": "wm-core-pnpm-store-${devcontainerId}",
+      "target": "/home/vscode/.pnpm-store",
+      "type": "volume"
+    },
+    {
+      "source": "wm-core-node-modules-${devcontainerId}",
+      "target": "${containerWorkspaceFolder}/node_modules",
+      "type": "volume"
+    }
+  ],
+  "containerEnv": {
+    "npm_config_store_dir": "/home/vscode/.pnpm-store"
+  },
+  "onCreateCommand": {
+    "mount_permissions": "mount | egrep 'pnpm-store|node_modules' | awk '{print $3}' | sudo xargs chown `id -u`:`id -g`",
+    "pnpm_install": "sleep 2 && pnpm install"
+
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "biomejs.biome",
+        "vitest.explorer",
+        "bierner.markdown-mermaid"
+      ],
+      "dev.containers.mountWaylandSocket": false
+    }
+  }
+}
