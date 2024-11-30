@@ -10,7 +10,7 @@
   "scripts": {
     "build": "lerna run build",
     "test": "lerna run test",
-    "publish-packages": "lerna publish from-package -y",
+    "publish": "lerna publish from-package -y",
     "clean": "pnpm lerna run clean",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
@@ -23,9 +23,11 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.6",
     "lerna": "^8.1.9",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.6"
   }
 }
