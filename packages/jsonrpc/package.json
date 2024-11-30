@@ -1,12 +1,16 @@
 {
   "name": "@walletmesh/jsonrpc",
-  "version": "0.0.0",
+  "version": "0.0.1",
+  "private": false,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/WalletMesh/wm-core.git"
+    "url": "git+https://github.com/WalletMesh/wm-core.git"
   },
   "scripts": {
     "build": "tsc --build tsconfig.build.json",

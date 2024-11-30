@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-TEMPLATE_DIR=packages/template
+TEMPLATE_DIR=template
 
 if [ $# -ne 1 ]; then
     echo "Create a new package in packages/<name> with the package name @walletmesh/<name>"
@@ -17,6 +17,7 @@ fi
 NAME=$1
 PACKAGE_DIR=packages/$NAME
 PACKAGE_NAME=@walletmesh/$NAME
+VERSION=$(jq -r .version lerna.json)
 
 if [ -d $PACKAGE_DIR ]; then
     echo "Package $PACKAGE_DIR already exists"
@@ -29,7 +30,7 @@ mkdir -p $PACKAGE_DIR
 cp -r $TEMPLATE_DIR/* $PACKAGE_DIR
 
 # overwrite the package.json with the desired package name
-jq ".name = \"$PACKAGE_NAME\"" $TEMPLATE_DIR/package.json > $PACKAGE_DIR/package.json
+jq ".name = \"$PACKAGE_NAME\" | .version = \"$VERSION\"" $TEMPLATE_DIR/package.json > $PACKAGE_DIR/package.json
 
 tmpfile=$(mktemp)
 # update devcontainer.json with mount for the package's node_modules folder

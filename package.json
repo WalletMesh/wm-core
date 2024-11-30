@@ -1,5 +1,5 @@
 {
-  "name": "walletmesh-sdk",
+  "name": "wm-core",
   "version": "0.0.1",
   "description": "WalletMesh Core Monorepo",
   "private": true,
