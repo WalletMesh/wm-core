@@ -10,13 +10,14 @@ A JSON-RPC 2.0 library for TypeScript, providing a client and server implementat
 * Customizable transport layer for sending requests and responses.
 * Built-in error handling with custom error codes and messages.
 * Support for notifications (methods without responses).
+* Timeout support for client method calls.
 
 ## Usage
 
 1. Define [RPC methods](#defining-rpc-methods) using TypeScript generics.
-4. Setup a transport layer for sending requests and responses (see [Examples](#examples)).
-2. Create a [server instance](#server) and register methods.
-3. Create a [client instance](#client) and call server methods.
+2. Setup a transport layer for sending requests and responses (see [Examples](#examples)).
+3. Create a [server instance](#server) and register methods.
+4. Create a [client instance](#client) and call server methods.
 
 The library does not provide a built-in transport layer, allowing you to use any communication method needed.
 
@@ -42,8 +43,7 @@ type MethodMap = {
 const client = new JSONRPCClient(
     request => {
         window.postMessage(JSON.stringify(request), '*');
-    },
-    { timeout: 5000 },
+    }
 );
 
 client.callMethod('echo', 'Hello, world!').then(result => {
@@ -60,8 +60,7 @@ type MethodMap = {
 const server = new JSONRPCServer(
     response => {
         window.postMessage(JSON.stringify(response), '*');
-    },
-    { timeout: 5000 },
+    }
 );
 
 // Register methods
@@ -114,8 +113,7 @@ wss.on('connection', (ws) => {
     const server = new JSONRPCServer<MethodMap>(
         response => {
             ws.send(JSON.stringify(response));
-        },
-        { timeout: 5000 },
+        }
     )
     
     // Register methods
@@ -257,6 +255,32 @@ server.addMiddleware(
     }),
 );
 ```
+
+### Call Method Timeout
+
+The client's `callMethod` function supports an optional `timeoutInSeconds` parameter. A value of `0` means
+no timeout (wait indefinitely), which is also the default behavior.
+
+```js
+import { JSONRPCClient, TimeoutError } from '@walletmesh/jsonrpc';
+
+const client = new JSONRPCClient<MethodMap>(request => {
+    // Send the request to the server
+    // Implementation depends on your transport (e.g., WebSocket, HTTP)
+});
+
+client.callMethod('slowMethod', { data: 'test' }, 5).then(result => {
+    console.log('Result:', result);
+}).catch(error => {
+    if (error instanceof TimeoutError) {
+        console.error('Method call timed out, required id:', error.id);
+    } else {
+        console.error('Error:', error);
+    }
+});
+
+```
+
 
 ### Error Handling
 
