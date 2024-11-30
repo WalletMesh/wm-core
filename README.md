@@ -4,7 +4,6 @@
 
 Core WalletMesh Protocol Libraries
 
-
 ## Development
 
 This is a monorepo managed by [lerna](https://lerna.js.org/) and [pnpm](https://pnpm.io/).

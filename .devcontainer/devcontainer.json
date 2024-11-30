@@ -13,6 +13,11 @@
       "source": "wm-core-node-modules-${devcontainerId}",
       "target": "${containerWorkspaceFolder}/node_modules",
       "type": "volume"
+    },
+    {
+      "source": "wm-core-packages-jsonrpc-node-modules-${devcontainerId}",
+      "target": "${containerWorkspaceFolder}/packages/jsonrpc/node_modules",
+      "type": "volume"
     }
   ],
   "containerEnv": {
@@ -21,7 +26,6 @@
   "onCreateCommand": {
     "mount_permissions": "mount | egrep 'pnpm-store|node_modules' | awk '{print $3}' | sudo xargs chown `id -u`:`id -g`",
     "pnpm_install": "sleep 2 && pnpm install"
-
   },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
