@@ -8,6 +8,7 @@
   "publishConfig": {
     "access": "public"
   },
+  "homepage": "https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WalletMesh/wm-core.git"
