@@ -35,8 +35,6 @@ importers:
 
   packages/jsonrpc: {}
 
-  packages/template: {}
-
 packages:
 
   '@ampproject/remapping@2.3.0':
