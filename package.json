@@ -10,7 +10,7 @@
   "scripts": {
     "build": "lerna run build",
     "test": "lerna run test",
-    "publish": "lerna publish from-package -y",
+    "publish-packages": "lerna publish from-package -y",
     "clean": "pnpm lerna run clean",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
