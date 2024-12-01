@@ -7,6 +7,22 @@ import type {
 import { JSONRPCError } from './error.js';
 
 /**
+ * TimeoutError class for sending errors when a request times out.
+ */
+export class TimeoutError extends Error {
+    /**
+     * Creates a new TimeoutError instance.
+     *
+     * @param message - The error message.
+     * @param id - The request ID.
+     */
+    constructor(message: string, public id: JSONRPCID) {
+        super(message);
+        this.name = 'TimeoutError';
+    }
+}
+
+/**
  * JSONRPCClient class for sending requests and handling responses.
  *
  * @typeParam T - The RPC method map.
@@ -14,7 +30,11 @@ import { JSONRPCError } from './error.js';
 export class JSONRPCClient<T extends RPCMethodMap> {
     private pendingRequests: Map<
         JSONRPCID,
-        (response: JSONRPCResponse<T, keyof T>) => void
+        {
+            resolve: (value: T[keyof T]['result']) => void;
+            reject: (reason?: unknown) => void;
+            timer: ReturnType<typeof setTimeout> | null;
+        }
     > = new Map();
 
     /**
@@ -32,11 +52,13 @@ export class JSONRPCClient<T extends RPCMethodMap> {
      * @typeParam M - The method name.
      * @param method - The method name to call.
      * @param params - Parameters to pass to the method.
+     * @param timeoutInSeconds - Timeout in seconds (0 means no timeout, default is 0).
      * @returns A Promise that resolves with the result or rejects with an error.
      */
     public callMethod<M extends keyof T>(
         method: M,
         params?: T[M]['params'],
+        timeoutInSeconds = 0,
     ): Promise<T[M]['result']> {
         const id = crypto.randomUUID();
         const request: JSONRPCRequest<T, M> = {
@@ -47,13 +69,16 @@ export class JSONRPCClient<T extends RPCMethodMap> {
         };
 
         return new Promise((resolve, reject) => {
-            this.pendingRequests.set(id, (response: JSONRPCResponse<T, keyof T>) => {
-                if (response.error) {
-                    reject(response.error);
-                } else {
-                    resolve(response.result);
-                }
-            });
+            let timer: ReturnType<typeof setTimeout> | null = null;
+
+            if (timeoutInSeconds > 0) {
+                timer = setTimeout(() => {
+                    this.pendingRequests.delete(id);
+                    reject(new TimeoutError('Request timed out', id));
+                }, timeoutInSeconds * 1000);
+            }
+
+            this.pendingRequests.set(id, { resolve, reject, timer });
 
             this.sendRequest(request);
         });
@@ -82,8 +107,11 @@ export class JSONRPCClient<T extends RPCMethodMap> {
      * @param response - The JSON-RPC response object.
      */
     public receiveResponse(response: JSONRPCResponse<T, keyof T>): void {
-        const callback = this.pendingRequests.get(response.id);
-        if (callback) {
+        const pendingRequest = this.pendingRequests.get(response.id);
+        if (pendingRequest) {
+            if (pendingRequest.timer) {
+                clearTimeout(pendingRequest.timer);
+            }
             if (response.error) {
                 // Reconstruct JSONRPCError from error response
                 const error = new JSONRPCError(
@@ -91,9 +119,9 @@ export class JSONRPCClient<T extends RPCMethodMap> {
                     response.error.message,
                     response.error.data,
                 );
-                callback({ ...response, error });
+                pendingRequest.reject(error);
             } else {
-                callback(response);
+                pendingRequest.resolve(response.result);
             }
             this.pendingRequests.delete(response.id);
         } else {

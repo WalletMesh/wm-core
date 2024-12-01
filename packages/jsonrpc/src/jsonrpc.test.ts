@@ -3,6 +3,7 @@ import {
     JSONRPCError,
     JSONRPCClient,
     JSONRPCServer,
+    TimeoutError,
 } from './index.js';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
@@ -17,6 +18,7 @@ type MethodMap = {
         params: { key: string; value: number };
         result: { key: string; value: number };
     };
+    delayedMethod: { params: undefined; result: string };
 };
 
 describe('JSONRPC', () => {
@@ -423,5 +425,54 @@ describe('JSONRPC', () => {
                 id: 1,
             });
         });
+    });
+});
+
+describe('JSONRPCClient timeout', () => {
+    let client: JSONRPCClient<MethodMap>;
+    let server: JSONRPCServer<MethodMap>;
+    let clientSendRequest: ReturnType<typeof vi.fn>;
+    let serverSendResponse: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        clientSendRequest = vi.fn();
+        serverSendResponse = vi.fn();
+
+        client = new JSONRPCClient<MethodMap>(clientSendRequest);
+        server = new JSONRPCServer<MethodMap>(serverSendResponse);
+
+        clientSendRequest.mockImplementation((request) => {
+            // Simulate network delay
+            if (request.method === 'delayedMethod') {
+                setTimeout(() => server.receiveRequest(request), 2000);
+            } else {
+                server.receiveRequest(request);
+            }
+        });
+
+        serverSendResponse.mockImplementation((response) => {
+            client.receiveResponse(response);
+        });
+
+        server.registerMethod('delayedMethod', async () => {
+            // Simulate delay in method processing
+            return 'Delayed Response';
+        });
+    });
+
+    it('should timeout if response takes too long', async () => {
+        await expect(
+            client.callMethod('delayedMethod', undefined, 1),
+        ).rejects.toBeInstanceOf(TimeoutError);
+    });
+
+    it('should not timeout if response is within the timeout period', async () => {
+        const result = await client.callMethod('delayedMethod', undefined, 5);
+        expect(result).toBe('Delayed Response');
+    });
+
+    it('should not timeout when timeoutInSeconds is 0 (no timeout)', async () => {
+        const result = await client.callMethod('delayedMethod', undefined, 0);
+        expect(result).toBe('Delayed Response');
     });
 });
