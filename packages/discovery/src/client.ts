@@ -8,6 +8,59 @@ import { isWalletInfo, isDiscoveryRequestEvent, isDiscoveryAckEvent } from './gu
 import { WM_PROTOCOL_VERSION, WmDiscovery } from './constants.js';
 
 /**
+ * Factory method to create a DiscoveryAnnouncer for web wallets.
+ *
+ * @param {string} name - The name of the wallet.
+ * @param {string} icon - The icon URL of the wallet.
+ * @param {string} rdns - The reverse DNS identifier of the wallet.
+ * @param {string} url - The URL of the web wallet.
+ * @param {string[]} supportedTechnologies - An array of supported technologies.
+ * @param {(origin: string) => boolean} [callback] - An optional callback function to validate the origin of the discovery request.
+ * @returns {DiscoveryAnnouncer} An instantiated DiscoveryAnnouncer object.
+ */
+export function createWebWalletAnnouncer(
+  name: string,
+  icon: string,
+  rdns: string,
+  url: string,
+  supportedTechnologies: string[],
+  callback?: (origin: string) => boolean,
+): DiscoveryAnnouncer {
+  const walletInfo: WalletInfo = { name, icon, rdns, url };
+  const options: DiscoveryAnnouncerOptions = { walletInfo, supportedTechnologies, callback };
+  return new DiscoveryAnnouncer(options);
+}
+
+/**
+ * Factory method to create a DiscoveryAnnouncer for extension wallets.
+ *
+ * @param {string} name - The name of the wallet.
+ * @param {string} icon - The icon URL of the wallet.
+ * @param {string} rdns - The reverse DNS identifier of the wallet.
+ * @param {string[]} supportedTechnologies - An array of supported technologies.
+ * @param {string} extensionId - An optional extension ID of the wallet.
+ * @param {string} [code] - An optional code for the extension wallet.
+ * @param {(origin: string) => boolean} [callback] - An optional callback function to validate the origin of the discovery request.
+ * @returns {DiscoveryAnnouncer} An instantiated DiscoveryAnnouncer object.
+ */
+export function createExtensionWalletAnnouncer(
+  name: string,
+  icon: string,
+  rdns: string,
+  supportedTechnologies: string[],
+  extensionId?: string,
+  code?: string,
+  callback?: (origin: string) => boolean,
+): DiscoveryAnnouncer {
+  if (!extensionId && !code) {
+    throw new Error('Extension ID or code is required for extension wallets');
+  }
+  const walletInfo: WalletInfo = { name, icon, rdns, extensionId, code };
+  const options: DiscoveryAnnouncerOptions = { walletInfo, supportedTechnologies, callback };
+  return new DiscoveryAnnouncer(options);
+}
+
+/**
  * Options for initializing a DiscoveryAnnouncer.
  *
  * @interface DiscoveryAnnouncerOptions
@@ -22,7 +75,7 @@ export interface DiscoveryAnnouncerOptions {
   sessionId?: string;
   eventTarget?: EventTarget;
   supportedTechnologies?: string[];
-  callback?: (origin: string) => boolean;
+  callback?: ((origin: string) => boolean) | undefined;
 }
 
 /**

@@ -1,4 +1,10 @@
-import { DiscoveryListener } from './server.js';
-import { DiscoveryAnnouncer } from './client.js';
+import { DiscoveryListener, createDiscoveryListener } from './server.js';
+import { DiscoveryAnnouncer, createExtensionWalletAnnouncer, createWebWalletAnnouncer } from './client.js';
 
-export { DiscoveryListener, DiscoveryAnnouncer };
+export {
+  DiscoveryListener,
+  createDiscoveryListener,
+  DiscoveryAnnouncer,
+  createExtensionWalletAnnouncer,
+  createWebWalletAnnouncer,
+};
