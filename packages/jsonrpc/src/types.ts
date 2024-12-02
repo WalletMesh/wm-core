@@ -6,11 +6,7 @@ export type JSONRPCID = string | number | null;
 /**
  * Type representing JSON-RPC parameters.
  */
-export type JSONRPCParams =
-    | undefined
-    | unknown[]
-    | Record<string, unknown>
-    | null;
+export type JSONRPCParams = undefined | unknown[] | Record<string, unknown> | null;
 
 /**
  * Method definition with generic parameters and result.
@@ -18,21 +14,18 @@ export type JSONRPCParams =
  * @typeParam P - The type of the method parameters.
  * @typeParam R - The type of the method result.
  */
-export type RPCMethodDef<
-    P extends JSONRPCParams = JSONRPCParams,
-    R = unknown,
-> = {
-    /** The parameters of the method. */
-    params: P;
-    /** The result of the method. */
-    result: R;
+export type RPCMethodDef<P extends JSONRPCParams = JSONRPCParams, R = unknown> = {
+  /** The parameters of the method. */
+  params: P;
+  /** The result of the method. */
+  result: R;
 };
 
 /**
  * Method map with method names as keys and method definitions as values.
  */
 export type RPCMethodMap = {
-    [method: string]: RPCMethodDef;
+  [method: string]: RPCMethodDef;
 };
 
 /**
@@ -42,14 +35,14 @@ export type RPCMethodMap = {
  * @typeParam M - The method name.
  */
 export interface JSONRPCRequest<T extends RPCMethodMap, M extends keyof T> {
-    /** The JSON-RPC version ('2.0'). */
-    jsonrpc: '2.0';
-    /** The method name. */
-    method: M;
-    /** The parameters of the method. */
-    params: T[M]['params'];
-    /** The request ID. */
-    id: JSONRPCID | null;
+  /** The JSON-RPC version ('2.0'). */
+  jsonrpc: '2.0';
+  /** The method name. */
+  method: M;
+  /** The parameters of the method. */
+  params: T[M]['params'];
+  /** The request ID. */
+  id: JSONRPCID | null;
 }
 
 /**
@@ -59,26 +52,26 @@ export interface JSONRPCRequest<T extends RPCMethodMap, M extends keyof T> {
  * @typeParam M - The method name.
  */
 export interface JSONRPCResponse<T extends RPCMethodMap, M extends keyof T> {
-    /** The JSON-RPC version ('2.0'). */
-    jsonrpc: '2.0';
-    /** The result of the method call, if successful. */
-    result?: T[M]['result'];
-    /** The error object, if an error occurred. */
-    error?: JSONRPCErrorInterface;
-    /** The request ID. */
-    id: JSONRPCID;
+  /** The JSON-RPC version ('2.0'). */
+  jsonrpc: '2.0';
+  /** The result of the method call, if successful. */
+  result?: T[M]['result'];
+  /** The error object, if an error occurred. */
+  error?: JSONRPCErrorInterface;
+  /** The request ID. */
+  id: JSONRPCID;
 }
 
 /**
  * JSON-RPC 2.0 Error interface.
  */
 export interface JSONRPCErrorInterface {
-    /** The error code. */
-    code: number;
-    /** The error message. */
-    message: string;
-    /** Additional error data. */
-    data?: string;
+  /** The error code. */
+  code: number;
+  /** The error message. */
+  message: string;
+  /** Additional error data. */
+  data?: string;
 }
 
 /**
@@ -87,6 +80,6 @@ export interface JSONRPCErrorInterface {
  * @typeParam T - The RPC method map.
  */
 export type JSONRPCMiddleware<T extends RPCMethodMap> = (
-    request: JSONRPCRequest<T, keyof T>,
-    next: () => Promise<JSONRPCResponse<T, keyof T>>,
+  request: JSONRPCRequest<T, keyof T>,
+  next: () => Promise<JSONRPCResponse<T, keyof T>>,
 ) => Promise<JSONRPCResponse<T, keyof T>> | JSONRPCResponse<T, keyof T>;

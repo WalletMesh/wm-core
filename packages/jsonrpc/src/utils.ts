@@ -9,13 +9,13 @@ import type { JSONRPCMiddleware, RPCMethodMap } from './types.js';
  * @returns A new middleware function that applies the given middleware to the specified methods.
  */
 export function applyToMethods<T extends RPCMethodMap>(
-    methods: (keyof T)[] | '*',
-    middleware: JSONRPCMiddleware<T>,
+  methods: (keyof T)[] | '*',
+  middleware: JSONRPCMiddleware<T>,
 ): JSONRPCMiddleware<T> {
-    return async (request, next) => {
-        if (methods === '*' || methods.includes(request.method)) {
-            return middleware(request, next);
-        }
-        return next();
-    };
+  return async (request, next) => {
+    if (methods === '*' || methods.includes(request.method)) {
+      return middleware(request, next);
+    }
+    return next();
+  };
 }
