@@ -161,6 +161,71 @@ describe('DiscoveryAnnouncer', () => {
     expect(discoveryAnnouncer['pendingDiscoveryIds'].size).toBe(0);
   });
 
+  it('should not dispatch a DiscoveryResponseEvent if the callback returns false', () => {
+    const callback = vi.fn().mockReturnValue(false);
+    discoveryAnnouncer = new DiscoveryAnnouncer({
+      walletInfo: mockWallet,
+      eventTarget: mockEventTarget,
+      supportedTechnologies: ['bitcoin', 'ethereum'],
+      callback,
+    });
+
+    const requestEvent = new CustomEvent<DiscoveryRequestEvent>(WmDiscovery.Request, {
+      detail: {
+        version: WM_PROTOCOL_VERSION,
+        discoveryId: 'test-discovery-id',
+        technologies: ['bitcoin', 'solana'],
+      },
+    });
+
+    const handler = vi.fn();
+    mockEventTarget.addEventListener(WmDiscovery.Response, handler);
+
+    discoveryAnnouncer.start();
+
+    // Dispatch the request event
+    mockEventTarget.dispatchEvent(requestEvent);
+
+    // Verify the handler was not called
+    expect(handler).not.toHaveBeenCalled();
+
+    // Verify the callback was called
+    expect(callback).toHaveBeenCalled();
+  });
+
+  it('should dispatch a DiscoveryResponseEvent if the callback returns true', () => {
+    const callback = vi.fn().mockReturnValue(true);
+    discoveryAnnouncer = new DiscoveryAnnouncer({
+      walletInfo: mockWallet,
+      eventTarget: mockEventTarget,
+      sessionId: 'wallet-123',
+      supportedTechnologies: ['bitcoin', 'ethereum'],
+      callback,
+    });
+
+    const requestEvent = new CustomEvent<DiscoveryRequestEvent>(WmDiscovery.Request, {
+      detail: {
+        version: WM_PROTOCOL_VERSION,
+        discoveryId: 'test-discovery-id',
+        technologies: ['bitcoin', 'solana'],
+      },
+    });
+
+    const handler = vi.fn();
+    mockEventTarget.addEventListener(WmDiscovery.Response, handler);
+
+    discoveryAnnouncer.start();
+
+    // Dispatch the request event
+    mockEventTarget.dispatchEvent(requestEvent);
+
+    // Verify the handler was called
+    expect(handler).toHaveBeenCalled();
+
+    // Verify the callback was called
+    expect(callback).toHaveBeenCalled();
+  });
+
   it('should handle valid DiscoveryRequestEvent and call dispatchDiscoveryResponseEvent', () => {
     const validRequestEvent = new CustomEvent<DiscoveryRequestEvent>(WmDiscovery.Request, {
       detail: {

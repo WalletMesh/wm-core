@@ -15,12 +15,14 @@ import { WM_PROTOCOL_VERSION, WmDiscovery } from './constants.js';
  * @property {string} [sessionId] - An optional session ID for the discovery process.
  * @property {EventTarget} [eventTarget] - An optional event target for dispatching and listening to events. Defaults to the global window object.
  * @property {string[]} [supportedTechnologies] - An optional array of supported technologies.
+ * @property {(origin: string) => boolean} [callback] - An optional callback function to validate the origin of the discovery request.
  */
 export interface DiscoveryAnnouncerOptions {
   walletInfo: WalletInfo;
   sessionId?: string;
   eventTarget?: EventTarget;
   supportedTechnologies?: string[];
+  callback?: (origin: string) => boolean;
 }
 
 /**
@@ -38,13 +40,20 @@ export class DiscoveryAnnouncer {
   private pendingDiscoveryIds = new Set<string>();
   private supportedTechnologies: string[];
   private eventTarget: EventTarget;
+  private callback: ((origin: string) => boolean) | null;
 
   /**
    * Creates an instance of the announcer.
    *
    * @param {DiscoveryAnnouncerOptions} options - The options to initialize the DiscoveryAnnouncer.
    */
-  constructor({ walletInfo, sessionId, supportedTechnologies, eventTarget }: DiscoveryAnnouncerOptions) {
+  constructor({
+    walletInfo,
+    sessionId,
+    supportedTechnologies,
+    eventTarget,
+    callback,
+  }: DiscoveryAnnouncerOptions) {
     if (!isWalletInfo(walletInfo)) {
       throw new Error('Invalid walletInfo: ${walletInfo}');
     }
@@ -52,6 +61,7 @@ export class DiscoveryAnnouncer {
     this.sessionId = sessionId ?? crypto.randomUUID();
     this.supportedTechnologies = supportedTechnologies ?? [];
     this.eventTarget = eventTarget ?? window;
+    this.callback = callback ?? null;
   }
 
   /**
@@ -139,6 +149,10 @@ export class DiscoveryAnnouncer {
     const { discoveryId, technologies } = response;
 
     if (this.acknowledgedDiscoveryIds.has(discoveryId)) {
+      return;
+    }
+
+    if (this.callback && !this.callback(window.origin)) {
       return;
     }
 
