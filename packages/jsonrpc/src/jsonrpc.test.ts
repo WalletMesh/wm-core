@@ -134,15 +134,15 @@ describe('JSONRPC', () => {
   describe('Middleware', () => {
     it('should execute middleware in order', async () => {
       const order: number[] = [];
-      server.addMiddleware(async (req, next) => {
+      server.addMiddleware(async (_req, next) => {
         order.push(1);
         return await next();
       });
-      server.addMiddleware(async (req, next) => {
+      server.addMiddleware(async (_req, next) => {
         order.push(2);
         return await next();
       });
-      server.addMiddleware(async (req, next) => {
+      server.addMiddleware(async (_req, next) => {
         order.push(3);
         return await next();
       });
@@ -169,7 +169,7 @@ describe('JSONRPC', () => {
 
     it('should support removing middleware', async () => {
       const callLog: string[] = [];
-      const removeMiddleware = server.addMiddleware(async (req, next) => {
+      const removeMiddleware = server.addMiddleware(async (_req, next) => {
         callLog.push('middleware');
         return next();
       });
@@ -340,7 +340,7 @@ describe('JSONRPC', () => {
     });
 
     it('should handle next() called multiple times error', async () => {
-      server.addMiddleware(async (req, next) => {
+      server.addMiddleware(async (_req, next) => {
         await next();
         return await next();
       });

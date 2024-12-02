@@ -71,7 +71,7 @@ export interface JSONRPCErrorInterface {
   /** The error message. */
   message: string;
   /** Additional error data. */
-  data?: string;
+  data?: string | undefined;
 }
 
 /**

@@ -27,7 +27,7 @@ export class JSONRPCServer<T extends RPCMethodMap> {
     };
 
     // Base handler middleware
-    const baseHandler: JSONRPCMiddleware<T> = async (request, next) => {
+    const baseHandler: JSONRPCMiddleware<T> = async (request, _next) => {
       const handler = this.methods.get(request.method);
       if (!handler) {
         throw new JSONRPCError(-32601, 'Method not found');
@@ -125,6 +125,9 @@ export class JSONRPCServer<T extends RPCMethodMap> {
           throw new Error('No middleware to handle request');
         }
         const fn = middlewareList[i];
+        if (!fn) {
+          throw new Error(`Middleware function at index ${i} is undefined`);
+        }
         return await fn(request, () => dispatch(i + 1));
       };
       return dispatch(0);
