@@ -109,31 +109,6 @@ export class DiscoveryListener {
   };
 
   /**
-   * Resets the server state with new configurations.
-   *
-   * This method performs the following actions:
-   * 1. Updates the technologies if provided.
-   * 2. Sets a new discovery ID or generates a new one if not provided.
-   * 3. Updates the callback function if provided.
-   * 4. Clears the current wallets state.
-   *
-   * @param {string[]} [technologies] - An optional array of technologies to update.
-   * @param {string} [discoveryId] - An optional discovery ID to set. If not provided, a new one will be generated.
-   * @param {(wallet: WalletInfo) => void} [callback] - An optional callback function to update.
-   *
-   * @returns {void}
-   */
-  reset = (technologies?: string[], discoveryId?: string, callback?: (wallet: WalletInfo) => void): void => {
-    this.technologies = technologies ?? [];
-
-    this.discoveryId = discoveryId ?? crypto.randomUUID();
-
-    this.callback = callback ?? null;
-
-    this.walletMap.clear();
-  };
-
-  /**
    * Initializes and starts the event listeners for handling discovery events.
    *
    * This method performs the following actions:
