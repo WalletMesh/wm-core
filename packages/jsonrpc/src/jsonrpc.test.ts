@@ -1,3 +1,4 @@
+import { after, afterEach } from 'node:test';
 import { applyToMethods, JSONRPCError, JSONRPCClient, JSONRPCServer, TimeoutError } from './index.js';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
@@ -421,6 +422,7 @@ describe('JSONRPCClient timeout', () => {
   let serverSendResponse: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     clientSendRequest = vi.fn();
     serverSendResponse = vi.fn();
 
@@ -431,6 +433,7 @@ describe('JSONRPCClient timeout', () => {
       // Simulate network delay
       if (request.method === 'delayedMethod') {
         setTimeout(() => server.receiveRequest(request), 2000);
+        vi.advanceTimersByTime(2000);
       } else {
         server.receiveRequest(request);
       }
@@ -444,6 +447,10 @@ describe('JSONRPCClient timeout', () => {
       // Simulate delay in method processing
       return 'Delayed Response';
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should timeout if response takes too long', async () => {
