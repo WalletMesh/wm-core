@@ -18,6 +18,11 @@
       "source": "wm-core-packages-jsonrpc-node-modules-${devcontainerId}",
       "target": "${containerWorkspaceFolder}/packages/jsonrpc/node_modules",
       "type": "volume"
+    },
+    {
+      "source": "wm-core-packages-discover-node-modules-${devcontainerId}",
+      "target": "${containerWorkspaceFolder}/packages/discovery/node_modules",
+      "type": "volume"
     }
   ],
   "containerEnv": {
