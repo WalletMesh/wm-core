@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { DiscoveryAnnouncer } from './client.js';
+import { DiscoveryAnnouncer, createWebWalletAnnouncer, createExtensionWalletAnnouncer } from './client.js';
 import type { DiscoveryAnnouncerOptions } from './client.js';
 import type { WalletInfo, DiscoveryRequestEvent, DiscoveryAckEvent } from './types.js';
 import { WmDiscovery, WM_PROTOCOL_VERSION } from './constants.js';
@@ -33,6 +33,68 @@ describe('DiscoveryAnnouncer', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  describe('createWebWalletAnnouncer', () => {
+    it('should create a DiscoveryAnnouncer for web wallets', () => {
+      const name = 'Web Wallet';
+      const icon = 'https://example.com/icon.png';
+      const rdns = 'com.example.webwallet';
+      const url = 'https://example.com';
+      const supportedTechnologies = ['tech1', 'tech2'];
+      const callback = (origin: string) => origin === 'https://trusted.com';
+
+      const announcer = createWebWalletAnnouncer(name, icon, rdns, url, supportedTechnologies, callback);
+
+      expect(announcer).toBeInstanceOf(DiscoveryAnnouncer);
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['walletInfo']).toEqual({ name, icon, rdns, url });
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['supportedTechnologies']).toEqual(supportedTechnologies);
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['callback']).toBe(callback);
+    });
+  });
+
+  describe('createExtensionWalletAnnouncer', () => {
+    it('should create a DiscoveryAnnouncer for extension wallets', () => {
+      const name = 'Extension Wallet';
+      const icon = 'https://example.com/icon.png';
+      const rdns = 'com.example.extensionwallet';
+      const extensionId = 'extension-id';
+      const supportedTechnologies = ['tech1', 'tech2'];
+      const code = 'optional-code';
+      const callback = (origin: string) => origin === 'https://trusted.com';
+
+      const announcer = createExtensionWalletAnnouncer(
+        name,
+        icon,
+        rdns,
+        supportedTechnologies,
+        extensionId,
+        code,
+        callback,
+      );
+
+      expect(announcer).toBeInstanceOf(DiscoveryAnnouncer);
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['walletInfo']).toEqual({ name, icon, rdns, extensionId, code });
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['supportedTechnologies']).toEqual(supportedTechnologies);
+      // biome-ignore lint: Accessing private property for testing
+      expect(announcer['callback']).toBe(callback);
+    });
+
+    it('should not create a DiscoveryAnnouncer for extension wallets without an extension id or code', () => {
+      const name = 'Extension Wallet';
+      const icon = 'https://example.com/icon.png';
+      const rdns = 'com.example.extensionwallet';
+      const supportedTechnologies = ['tech1', 'tech2'];
+
+      expect(() => {
+        createExtensionWalletAnnouncer(name, icon, rdns, supportedTechnologies);
+      }).toThrowError('Extension ID or code is required for extension wallets');
+    });
   });
 
   it('should set walletInfo to the provided value in the constructor', () => {
@@ -159,6 +221,71 @@ describe('DiscoveryAnnouncer', () => {
     // Verify the pendingDiscoveryIds set was cleared
     // biome-ignore lint: Accessing private property for testing
     expect(discoveryAnnouncer['pendingDiscoveryIds'].size).toBe(0);
+  });
+
+  it('should not dispatch a DiscoveryResponseEvent if the callback returns false', () => {
+    const callback = vi.fn().mockReturnValue(false);
+    discoveryAnnouncer = new DiscoveryAnnouncer({
+      walletInfo: mockWallet,
+      eventTarget: mockEventTarget,
+      supportedTechnologies: ['bitcoin', 'ethereum'],
+      callback,
+    });
+
+    const requestEvent = new CustomEvent<DiscoveryRequestEvent>(WmDiscovery.Request, {
+      detail: {
+        version: WM_PROTOCOL_VERSION,
+        discoveryId: 'test-discovery-id',
+        technologies: ['bitcoin', 'solana'],
+      },
+    });
+
+    const handler = vi.fn();
+    mockEventTarget.addEventListener(WmDiscovery.Response, handler);
+
+    discoveryAnnouncer.start();
+
+    // Dispatch the request event
+    mockEventTarget.dispatchEvent(requestEvent);
+
+    // Verify the handler was not called
+    expect(handler).not.toHaveBeenCalled();
+
+    // Verify the callback was called
+    expect(callback).toHaveBeenCalled();
+  });
+
+  it('should dispatch a DiscoveryResponseEvent if the callback returns true', () => {
+    const callback = vi.fn().mockReturnValue(true);
+    discoveryAnnouncer = new DiscoveryAnnouncer({
+      walletInfo: mockWallet,
+      eventTarget: mockEventTarget,
+      sessionId: 'wallet-123',
+      supportedTechnologies: ['bitcoin', 'ethereum'],
+      callback,
+    });
+
+    const requestEvent = new CustomEvent<DiscoveryRequestEvent>(WmDiscovery.Request, {
+      detail: {
+        version: WM_PROTOCOL_VERSION,
+        discoveryId: 'test-discovery-id',
+        technologies: ['bitcoin', 'solana'],
+      },
+    });
+
+    const handler = vi.fn();
+    mockEventTarget.addEventListener(WmDiscovery.Response, handler);
+
+    discoveryAnnouncer.start();
+
+    // Dispatch the request event
+    mockEventTarget.dispatchEvent(requestEvent);
+
+    // Verify the handler was called
+    expect(handler).toHaveBeenCalled();
+
+    // Verify the callback was called
+    expect(callback).toHaveBeenCalled();
   });
 
   it('should handle valid DiscoveryRequestEvent and call dispatchDiscoveryResponseEvent', () => {

@@ -8,6 +8,21 @@ import { isDiscoveryResponseEvent } from './guards.js';
 import { WM_PROTOCOL_VERSION, WmDiscovery, CONFIG } from './constants.js';
 
 /**
+ * Factory method to create a DiscoveryListener.
+ *
+ * @param {string[]} technologies - An array of technologies to initialize.
+ * @param {(wallet: WalletInfo) => void} [callback] - An optional callback function to handle wallet information.
+ * @returns {DiscoveryListener} An instantiated DiscoveryListener object.
+ */
+export function createDiscoveryListener(
+  technologies: string[],
+  callback?: (wallet: WalletInfo) => void,
+): DiscoveryListener {
+  const options: DiscoveryListenerOptions = { technologies, callback };
+  return new DiscoveryListener(options);
+}
+
+/**
  * Options for initializing a DiscoveryListener.
  *
  * @interface DiscoveryListenerOptions
@@ -19,7 +34,7 @@ import { WM_PROTOCOL_VERSION, WmDiscovery, CONFIG } from './constants.js';
 export interface DiscoveryListenerOptions {
   technologies?: string[];
   discoveryId?: string;
-  callback?: (wallet: WalletInfo) => void;
+  callback?: ((wallet: WalletInfo) => void) | undefined;
   eventTarget?: EventTarget;
 }
 

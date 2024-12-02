@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import { DiscoveryListener } from './server.js';
+import { DiscoveryListener, createDiscoveryListener } from './server.js';
 import type { DiscoveryListenerOptions } from './server.js';
 import type { WalletInfo, DiscoveryResponseEvent, DiscoveryAckEvent } from './types.js';
 import { WmDiscovery, WM_PROTOCOL_VERSION } from './constants.js';
@@ -35,6 +35,33 @@ describe('DiscoveryListener', () => {
     discoveryListener.stop();
     vi.resetAllMocks();
     vi.useRealTimers();
+  });
+
+  it('should create a DiscoveryListener with the provided technologies and callback', () => {
+    const technologies = ['tech1', 'tech2'];
+    const callback = (wallet: WalletInfo) => {
+      console.log(wallet);
+    };
+
+    const listener = createDiscoveryListener(technologies, callback);
+
+    expect(listener).toBeInstanceOf(DiscoveryListener);
+    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
+    expect(listener['technologies']).toEqual(technologies);
+    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
+    expect(listener['callback']).toBe(callback);
+  });
+
+  it('should create a DiscoveryListener with the provided technologies and no callback', () => {
+    const technologies = ['tech1', 'tech2'];
+
+    const listener = createDiscoveryListener(technologies);
+
+    expect(listener).toBeInstanceOf(DiscoveryListener);
+    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
+    expect(listener['technologies']).toEqual(technologies);
+    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
+    expect(listener['callback']).toBeNull();
   });
 
   it('should set technologies to the provided value in the constructor', () => {
