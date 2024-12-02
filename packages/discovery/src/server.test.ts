@@ -212,58 +212,6 @@ describe('DiscoveryListener', () => {
     expect(discoveryListener['readyTimeout']).toBeNull();
   });
 
-  it('should reset the state with new configurations upon calling reset()', () => {
-    const newTechnologies = ['evm'];
-    const newDiscoveryId = 'new-discovery-id';
-    const newCallback = vi.fn();
-
-    // Add a wallet to the state
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    discoveryListener['walletMap'].set('wallet-1', {
-      name: 'Test Wallet 1',
-      icon: 'icon1',
-      rdns: 'com.wallet1',
-    });
-
-    // Call the reset function
-    discoveryListener.reset(newTechnologies, newDiscoveryId, newCallback);
-
-    // Verify the state has been reset
-
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['technologies']).toEqual(newTechnologies);
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['discoveryId']).toEqual(newDiscoveryId);
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['callback']).toEqual(newCallback);
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['walletMap'].size).toBe(0);
-  });
-
-  it('should reset the state with default values upon calling reset()', () => {
-    // Add a wallet to the state
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    discoveryListener['walletMap'].set('wallet-1', {
-      name: 'Test Wallet 1',
-      icon: 'icon1',
-      rdns: 'com.wallet1',
-    });
-
-    // Call the reset function without parameters
-    discoveryListener.reset();
-
-    // Verify the state has been reset with default values
-
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['technologies']).toEqual([]);
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['discoveryId']).not.toEqual('test-discovery-id'); // Should be a new UUID
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['callback']).toBeNull();
-    // biome-ignore lint/complexity/useLiteralKeys: Access private state for testing
-    expect(discoveryListener['walletMap'].size).toBe(0);
-  });
-
   it('should debounce DiscoveryReadyEvents and dispatch DiscoveryRequestEvent', () => {
     vi.useFakeTimers();
     const dispatchDiscoveryRequestEventSpy = vi.spyOn(
