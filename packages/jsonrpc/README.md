@@ -6,7 +6,7 @@ A JSON-RPC 2.0 library for TypeScript, providing a client and server implementat
 
 * JSON-RPC 2.0 compliant client and server.
 * Type-safe method definitions using TypeScript generics.
-* Support for middleware functions on the server.
+* Support for middleware functions on the server with context passing.
 * Customizable transport layer for sending requests and responses.
 * Built-in error handling with custom error codes and messages.
 * Support for notifications (methods without responses).
@@ -24,6 +24,7 @@ The library does not provide a built-in transport layer, allowing you to use any
 Additional features:
 - Use [middleware](#middleware) to modify requests or responses.
 - [Handle errors](#error-handling) in method handlers or middleware.
+- [Customize parameter serialization](#parameter-serialization) for method parameters and results.
 - Send [notifications](#notifications) to the server.
 
 ### Examples
@@ -115,7 +116,7 @@ wss.on('connection', (ws) => {
             ws.send(JSON.stringify(response));
         }
     )
-    
+   
     // Register methods
     server.registerMethod('echo', async (params) => {
         return params;
@@ -128,6 +129,36 @@ wss.on('connection', (ws) => {
 ```
 
 ### Middleware
+
+Middleware functions can now receive a context object `C` that can be used to share data across middleware and method handlers.
+
+```typescript
+// Define a context type
+type Context = {
+  user?: string;
+};
+
+// Create a server instance with context type
+const server = new JSONRPCServer<MethodMap, Context>(async response => {
+  // Send the response back to the client
+});
+
+// Middleware that modifies the context
+server.addMiddleware(async (context, request, next) => {
+  // Set user information in context
+  context.user = request.params?.userName;
+  // Proceed to the next middleware or handler
+  return next();
+});
+
+// Method handler that accesses the context
+server.registerMethod('getUser', (context, params) => {
+  // Return the user from context
+  return `Current user: ${context.user}`;
+});
+```
+
+The context object is created per request and passed through all middleware and method handlers. It allows you to store and access request-specific data, enabling features like authentication, authorization, and logging.
 
 ```js
 const server = new JSONRPCServer<MethodMap>(
@@ -145,6 +176,36 @@ server.addMiddleware(async (request, next) => {
 });
 ```
 
+#### Middleware Applied to Specific Methods with Context
+
+You can apply middleware to specific methods and utilize the context:
+
+```typescript
+import { applyToMethods } from '@walletmesh/jsonrpc';
+
+// Middleware applied only to 'add' method
+server.addMiddleware(
+  applyToMethods(['add'], async (context, request, next) => {
+    // Perform authorization check and store result in context
+    context.isAuthorized = checkAuthorization(request);
+    if (!context.isAuthorized) {
+      throw new JSONRPCError(-32600, 'Unauthorized');
+    }
+    return next();
+  }),
+);
+
+// Method handler that relies on context
+server.registerMethod('add', (context, params) => {
+  if (!context.isAuthorized) {
+    throw new JSONRPCError(-32600, 'Unauthorized');
+  }
+  return params.a + params.b;
+});
+```
+
+In this example, the middleware checks authorization and sets a flag in the context. The method handler can then read the context to enforce authorization.
+
 ### Defining RPC Methods
 
 Define a method map to specify the RPC methods, their parameters, and the result.
@@ -156,6 +217,20 @@ type MethodMap = {
     // ...other methods
 };
 ```
+
+### Defining RPC Methods with Context
+
+When registering methods, you can define handlers that accept the context:
+
+```typescript
+// Register a method with context parameter
+server.registerMethod('greet', (context, params) => {
+  const user = context.user || 'Guest';
+  return `Hello, ${user}!`;
+});
+```
+
+The method handler receives the context object, allowing it to access data set by middleware or other parts of your application.
 
 ### Server
 
@@ -189,6 +264,52 @@ server.receiveRequest({
     id: '1',
 });
 ```
+
+### Full Example with Context
+
+Here's a complete example demonstrating context usage in middleware and method handlers:
+
+```typescript
+type MethodMap = {
+  login: { params: { username: string }; result: string };
+  getData: { params: null; result: string };
+};
+
+type Context = {
+  user?: string;
+};
+
+// Server setup
+const server = new JSONRPCServer<MethodMap, Context>(async response => {
+  // Send the response back to the client
+});
+
+// Authentication middleware
+server.addMiddleware(async (context, request, next) => {
+  if (request.method === 'login') {
+    // Skip authentication for login method
+    return next();
+  }
+  if (!context.user) {
+    throw new JSONRPCError(-32600, 'Authentication required');
+  }
+  return next();
+});
+
+// Method to handle login
+server.registerMethod('login', (context, params) => {
+  // Perform login logic
+  context.user = params.username;
+  return `Logged in as ${context.user}`;
+});
+
+// Protected method
+server.registerMethod('getData', (context, params) => {
+  return `Sensitive data for ${context.user}`;
+});
+```
+
+In this example, the `login` method sets the `user` in the context. The middleware checks for the authenticated user before allowing access to other methods.
 
 ## Client
 
@@ -292,6 +413,55 @@ import { JSONRPCError } from '@walletmesh/jsonrpc';
 server.registerMethod('errorMethod', () => {
     throw new JSONRPCError(-32000, 'Custom error', 'Error data');
 });
+```
+
+### Parameter Serialization
+
+The library supports custom serialization and deserialization of method parameters and results,
+allowing you to define custom serializers for the data types used in your methods.
+
+The serialization process is transparent to method handlers -- they receive and return the
+original types, while serialization is handled automatically by the library.
+
+
+```js
+// Define serializers for your types
+const dateSerializer: Serializer<Date> = {
+    serialize: (date: Date) => ({ serialized: date.toISOString() }),
+    deserialize: (data: RPCSerializedData) => new Date(data.serialized)
+};
+
+// Create method-specific serializer
+const methodSerializer: RPCSerializer<{ date: Date }, Date> = {
+    params: {
+        serialize: (params) => ({
+            serialized: JSON.stringify({ date: params.date.toISOString() })
+        }),
+        deserialize: (data) => {
+            const parsed = JSON.parse(data.serialized);
+            return { date: new Date(parsed.date) };
+        }
+    },
+    result: dateSerializer
+};
+
+// Register method with serializer
+server.registerMethod('processDate',
+    (params) => {
+        // params.date is automatically deserialized to Date
+        return params.date;
+    },
+    methodSerializer
+);
+
+// Register serializer on client
+client.registerSerializer('processDate', methodSerializer);
+
+// Call method - serialization is handled automatically
+const result = await client.callMethod('processDate', {
+    date: new Date()
+});
+// result is automatically deserialized to Date
 ```
 
 ## Testing

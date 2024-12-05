@@ -1,4 +1,11 @@
-import type { JSONRPCRequest, JSONRPCResponse, RPCMethodMap, JSONRPCID } from './types.js';
+import type {
+  JSONRPCRequest,
+  JSONRPCResponse,
+  JSONRPCMethodMap,
+  JSONRPCSerializer,
+  JSONRPCID,
+} from './types.js';
+import { isRPCSerializedData } from './utils.js';
 import { JSONRPCError } from './error.js';
 
 /**
@@ -25,29 +32,37 @@ export class TimeoutError extends Error {
  *
  * @typeParam T - The RPC method map.
  */
-export class JSONRPCClient<T extends RPCMethodMap> {
-  private pendingRequests: Map<
+export class JSONRPCClient<T extends JSONRPCMethodMap> {
+  private pendingRequests = new Map<
     JSONRPCID,
     {
       resolve: (value: T[keyof T]['result']) => void;
       reject: (reason?: unknown) => void;
       timer: ReturnType<typeof setTimeout> | null;
+      serializer: JSONRPCSerializer<T[keyof T]['params'], T[keyof T]['result']> | undefined;
     }
-  > = new Map();
+  >();
+  private serializer = new Map<keyof T, JSONRPCSerializer<T[keyof T]['params'], T[keyof T]['result']>>();
+
+  constructor(private sendRequest: (request: JSONRPCRequest<T, keyof T>) => void) {}
 
   /**
-   * Creates a new JSONRPCClient instance.
-   *
-   * @param sendRequest - A function that sends a JSON-RPC request.
+   * Registers serializer for a method.
    */
-  constructor(private sendRequest: (request: JSONRPCRequest<T, keyof T>) => void) {}
+  public registerSerializer<M extends keyof T>(
+    method: M,
+    serializer: JSONRPCSerializer<T[M]['params'], T[M]['result']>,
+  ): void {
+    console.debug('Registering serializer for method:', method);
+    this.serializer.set(method, serializer);
+  }
 
   /**
    * Calls a method on the JSON-RPC server.
    *
    * @typeParam M - The method name.
    * @param method - The method name to call.
-   * @param params - Parameters to pass to the method.
+   * @param params - Optional parameters to pass to the method.
    * @param timeoutInSeconds - Timeout in seconds (0 means no timeout, default is 0).
    * @returns A Promise that resolves with the result or rejects with an error.
    */
@@ -57,10 +72,15 @@ export class JSONRPCClient<T extends RPCMethodMap> {
     timeoutInSeconds = 0,
   ): Promise<T[M]['result']> {
     const id = crypto.randomUUID();
+
+    // Serialize the parameters if serializer exists
+    const paramSerializer = this.serializer.get(method)?.params;
+    const serializedParams = params && paramSerializer ? paramSerializer.serialize(params) : params;
+
     const request: JSONRPCRequest<T, M> = {
       jsonrpc: '2.0',
       method,
-      params: params || null,
+      params: serializedParams,
       id,
     };
 
@@ -74,7 +94,12 @@ export class JSONRPCClient<T extends RPCMethodMap> {
         }, timeoutInSeconds * 1000);
       }
 
-      this.pendingRequests.set(id, { resolve, reject, timer });
+      this.pendingRequests.set(id, {
+        resolve,
+        reject,
+        timer,
+        serializer: this.serializer.get(method),
+      });
 
       this.sendRequest(request);
     });
@@ -88,11 +113,14 @@ export class JSONRPCClient<T extends RPCMethodMap> {
    * @param params - Parameters to pass to the method.
    */
   public notify<M extends keyof T>(method: M, params: T[M]['params']): void {
+    // Serialize parameters if serializer exists
+    const paramSerializer = this.serializer.get(method)?.params;
+    const serializedParams = params && paramSerializer ? paramSerializer.serialize(params) : params;
+
     const request: JSONRPCRequest<T, keyof T> = {
       jsonrpc: '2.0',
       method,
-      params,
-      id: null,
+      params: serializedParams,
     };
     this.sendRequest(request);
   }
@@ -109,11 +137,20 @@ export class JSONRPCClient<T extends RPCMethodMap> {
         clearTimeout(pendingRequest.timer);
       }
       if (response.error) {
-        // Reconstruct JSONRPCError from error response
         const error = new JSONRPCError(response.error.code, response.error.message, response.error.data);
         pendingRequest.reject(error);
       } else {
-        pendingRequest.resolve(response.result);
+        // Deserialize the result if serializer is available and result is serialized
+        if (
+          response.result !== undefined &&
+          pendingRequest.serializer?.result &&
+          isRPCSerializedData(response.result)
+        ) {
+          const result = pendingRequest.serializer.result.deserialize(response.result);
+          pendingRequest.resolve(result);
+        } else {
+          pendingRequest.resolve(response.result);
+        }
       }
       this.pendingRequests.delete(response.id);
     } else {
