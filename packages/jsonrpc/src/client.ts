@@ -5,7 +5,7 @@ import type {
   JSONRPCSerializer,
   JSONRPCID,
 } from './types.js';
-import { isRPCSerializedData } from './utils.js';
+import { isJSONRPCSerializedData } from './utils.js';
 import { JSONRPCError } from './error.js';
 
 /**
@@ -144,7 +144,7 @@ export class JSONRPCClient<T extends JSONRPCMethodMap> {
         if (
           response.result !== undefined &&
           pendingRequest.serializer?.result &&
-          isRPCSerializedData(response.result)
+          isJSONRPCSerializedData(response.result)
         ) {
           const result = pendingRequest.serializer.result.deserialize(response.result);
           pendingRequest.resolve(result);

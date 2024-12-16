@@ -18,12 +18,21 @@ export type JSONRPCSerializedData = { serialized: string };
 
 /**
  * Interface for serializing and deserializing values.
- * @typeParam T - The type of value to serialize/deserialize.
+ * @typeParam T - The type of value to serialize/deserialize
  */
 export interface Serializer<T> {
-  /** Serializes a value to RPCSerializedData */
+  /**
+   * Serializes a value to JSONRPCSerializedData
+   * @param value - The value to serialize
+   * @returns The serialized data
+   */
   serialize(value: T): JSONRPCSerializedData;
-  /** Deserializes RPCSerializedData back to the original type */
+
+  /**
+   * Deserializes JSONRPCSerializedData back to the original type
+   * @param value - The serialized data to deserialize
+   * @returns The deserialized value
+   */
   deserialize(value: JSONRPCSerializedData): T;
 }
 
@@ -33,9 +42,14 @@ export interface Serializer<T> {
  * @typeParam R - The result type
  */
 export interface JSONRPCSerializer<P, R> {
-  /** Serializer for method parameters */
+  /**
+   * Serializer for method parameters
+   */
   params: Serializer<P>;
-  /** Optional serializer for method result */
+
+  /**
+   * Optional serializer for method result
+   */
   result?: Serializer<R>;
 }
 

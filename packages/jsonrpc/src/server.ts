@@ -5,8 +5,8 @@ import type {
   JSONRPCResponse,
   JSONRPCMethodMap,
   JSONRPCSerializer,
-  JSONRPCID,
   JSONRPCContext,
+  JSONRPCParams,
 } from './types.js';
 import { JSONRPCError } from './error.js';
 
@@ -41,19 +41,19 @@ interface RegisteredMethod<T extends JSONRPCMethodMap, M extends keyof T, C exte
 export class JSONRPCServer<T extends JSONRPCMethodMap, C extends JSONRPCContext> {
   private methods: Partial<{ [K in keyof T]: RegisteredMethod<T, K, C> }> = {};
   private middlewareStack: JSONRPCMiddleware<T, C>[] = [];
-  private sendResponse: (response: JSONRPCResponse<T, keyof T>) => Promise<void>;
+  private sendResponse: (
+    context: C,
+    request: JSONRPCRequest<T, keyof T, JSONRPCParams>,
+    response: JSONRPCResponse<T, keyof T>
+  ) => Promise<void>;
 
   /**
    * Creates a new JSONRPCServer instance.
    *
-   * @param sendResponse - A function that sends a JSON-RPC response.
+   * @param sendResponse - A function that sends a JSON-RPC response, receiving context, request and response.
    */
-  constructor(sendResponse: (response: JSONRPCResponse<T, keyof T>) => Promise<void>) {
-    // Wrap the sendResponse function to log responses
-    this.sendResponse = async (response: JSONRPCResponse<T, keyof T>) => {
-      console.debug('Sending response:', response);
-      await sendResponse(response);
-    };
+  constructor(sendResponse: typeof JSONRPCServer.prototype.sendResponse) {
+    this.sendResponse = sendResponse;
 
     // Base handler middleware
     const baseHandler: JSONRPCMiddleware<T, C> = async (context, request, _next) => {
@@ -113,7 +113,7 @@ export class JSONRPCServer<T extends JSONRPCMethodMap, C extends JSONRPCContext>
    */
   public async receiveRequest(context: C, request: JSONRPCRequest<T, keyof T>): Promise<void> {
     if (request.jsonrpc !== '2.0') {
-      await this.sendError(undefined, -32600, 'Invalid Request');
+      await this.sendError(context, request, -32600, 'Invalid Request');
       return;
     }
 
@@ -141,16 +141,16 @@ export class JSONRPCServer<T extends JSONRPCMethodMap, C extends JSONRPCContext>
               }
             : response;
 
-        await this.sendResponse(serializedResponse);
+        await this.sendResponse(context, request, serializedResponse);
       }
     } catch (error) {
       console.error('Error handling request:', error);
       if (error instanceof JSONRPCError) {
         if (request.id !== undefined) {
-          await this.sendError(request.id, error.code, error.message, error.data);
+          await this.sendError(context, request, error.code, error.message, error.data);
         }
       } else {
-        await this.sendError(request.id, -32000, error instanceof Error ? error.message : 'Unknown error');
+        await this.sendError(context, request, -32000, error instanceof Error ? error.message : 'Unknown error');
       }
     }
   }
@@ -179,17 +179,18 @@ export class JSONRPCServer<T extends JSONRPCMethodMap, C extends JSONRPCContext>
   /**
    * Sends a JSON-RPC error response.
    *
-   * @param id - The ID of the request that caused the error.
-   * @param code - The error code.
-   * @param message - The error message.
-   * @param data - Additional error data.
+   * @param context - The context object
+   * @param request - The original request that caused the error
+   * @param code - The error code
+   * @param message - The error message
+   * @param data - Additional error data
    */
-  private async sendError(id: JSONRPCID, code: number, message: string, data?: string): Promise<void> {
+  private async sendError(context: C, request: JSONRPCRequest<T, keyof T, JSONRPCParams>, code: number, message: string, data?: string): Promise<void> {
     const response: JSONRPCResponse<T, keyof T> = {
       jsonrpc: '2.0',
       error: { code, message, data },
-      id,
+      id: request.id
     };
-    this.sendResponse(response);
+    this.sendResponse(context, request, response);
   }
 }

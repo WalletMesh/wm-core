@@ -59,13 +59,13 @@ type MethodMap = {
 };
 
 const server = new JSONRPCServer(
-    response => {
+    (_context, _request, response) => {
         window.postMessage(JSON.stringify(response), '*');
     }
 );
 
 // Register methods
-server.registerMethod('echo', async (params) => {
+server.registerMethod('echo', async (_context, params) => {
     return params;
 });
 
@@ -112,13 +112,13 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 wss.on('connection', (ws) => {
     const server = new JSONRPCServer<MethodMap>(
-        response => {
+        (_context, _request, response) => {
             ws.send(JSON.stringify(response));
         }
     )
    
     // Register methods
-    server.registerMethod('echo', async (params) => {
+    server.registerMethod('echo', async (_context, params) => {
         return params;
     })
 
@@ -134,12 +134,12 @@ Middleware functions can now receive a context object `C` that can be used to sh
 
 ```typescript
 // Define a context type
-type Context = {
+type Context = JSONRPCContext & {
   user?: string;
 };
 
 // Create a server instance with context type
-const server = new JSONRPCServer<MethodMap, Context>(async response => {
+const server = new JSONRPCServer<MethodMap, Context>(async (context, request, response) => {
   // Send the response back to the client
 });
 
@@ -162,13 +162,13 @@ The context object is created per request and passed through all middleware and 
 
 ```js
 const server = new JSONRPCServer<MethodMap>(
-    response => {
+    (context, request, response) => {
         // Send the response back to the client
     }
 );
 
 // Logging middleware applied to all methods
-server.addMiddleware(async (request, next) => {
+server.addMiddleware(async (context, request, next) => {
     console.log('Received request:', request);
     const response = await next();
     console.log('Sending response:', response);
@@ -240,17 +240,17 @@ Create a JSON-RPC server and register methods.
 import { JSONRPCServer } from '@walletmesh/jsonrpc';
 
 // Create a server instance
-const server = new JSONRPCServer<MethodMap>(async response => {
+const server = new JSONRPCServer<MethodMap>(async (context, request, response) => {
     // Send the response back to the client
     // Implementation depends on your transport (e.g., WebSocket, HTTP)
 });
 
 // Register methods
-server.registerMethod('add', ({ a, b }) => {
+server.registerMethod('add', (_context, { a, b }) => {
     return a + b;
 });
 
-server.registerMethod('greet', ({ name }) => {
+server.registerMethod('greet', (_context, { name }) => {
     return `Hello, ${name}!`;
 });
 
@@ -280,7 +280,7 @@ type Context = {
 };
 
 // Server setup
-const server = new JSONRPCServer<MethodMap, Context>(async response => {
+const server = new JSONRPCServer<MethodMap, Context>(async (context, request, response) => {
   // Send the response back to the client
 });
 
@@ -348,7 +348,7 @@ Send notifications to the server when no response is expected.
 client.notify('notifyMethod', { data: 'test' });
 
 // Server-side handler
-server.registerMethod('notifyMethod', ({ data }) => {
+server.registerMethod('notifyMethod', (context, { data }) => {
     console.log('Received notification with data:', data);
 });
 ```
@@ -361,7 +361,7 @@ Use middleware to modify requests or responses, perform authorization checks, lo
 import { applyToMethods } from '@walletmesh/jsonrpc';
 
 // Logging middleware applied to all methods
-server.addMiddleware(async (request, next) => {
+server.addMiddleware(async (context, request, next) => {
     console.log('Received request:', request);
     const response = await next();
     console.log('Sending response:', response);
@@ -370,7 +370,7 @@ server.addMiddleware(async (request, next) => {
 
 // Middleware applied to specific methods
 server.addMiddleware(
-    applyToMethods(['add'], async (request, next) => {
+    applyToMethods(['add'], async (context, request, next) => {
         // Perform checks or modify the request
         return next();
     }),
@@ -390,18 +390,17 @@ const client = new JSONRPCClient<MethodMap>(request => {
     // Implementation depends on your transport (e.g., WebSocket, HTTP)
 });
 
-client.callMethod('slowMethod', { data: 'test' }, 5).then(result => {
-    console.log('Result:', result);
-}).catch(error => {
-    if (error instanceof TimeoutError) {
-        console.error('Method call timed out, required id:', error.id);
-    } else {
-        console.error('Error:', error);
-    }
-});
-
+try {
+  const result = await client.callMethod('slowMethod', { data: 'test' }, 5);
+  console.log('Result:', result);
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error('Request timed out:', error.id);
+  } else {
+    console.error('Error:', error);
+  }
+}
 ```
-
 
 ### Error Handling
 
@@ -428,11 +427,11 @@ original types, while serialization is handled automatically by the library.
 // Define serializers for your types
 const dateSerializer: Serializer<Date> = {
     serialize: (date: Date) => ({ serialized: date.toISOString() }),
-    deserialize: (data: RPCSerializedData) => new Date(data.serialized)
+    deserialize: (data: JSONRPCSerializedData) => new Date(data.serialized)
 };
 
 // Create method-specific serializer
-const methodSerializer: RPCSerializer<{ date: Date }, Date> = {
+const methodSerializer: JSONRPCSerializer<{ date: Date }, Date> = {
     params: {
         serialize: (params) => ({
             serialized: JSON.stringify({ date: params.date.toISOString() })
@@ -447,7 +446,7 @@ const methodSerializer: RPCSerializer<{ date: Date }, Date> = {
 
 // Register method with serializer
 server.registerMethod('processDate',
-    (params) => {
+    (_context, params) => {
         // params.date is automatically deserialized to Date
         return params.date;
     },

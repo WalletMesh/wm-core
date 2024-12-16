@@ -22,12 +22,12 @@ export function applyToMethods<T extends JSONRPCMethodMap, C extends JSONRPCCont
 }
 
 /**
- * Type guard to check if an object is RPCSerializedData.
+ * Type guard to check if an object is JSONRPCSerializedData.
  *
  * @param obj - The object to check
- * @returns True if obj is RPCSerializedData, false otherwise
+ * @returns True if obj is JSONRPCSerializedData, false otherwise
  */
-export function isRPCSerializedData(obj: unknown): obj is JSONRPCSerializedData {
+export function isJSONRPCSerializedData(obj: unknown): obj is JSONRPCSerializedData {
   return (
     obj !== null &&
     typeof obj === 'object' &&
